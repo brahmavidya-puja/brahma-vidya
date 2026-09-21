@@ -240,15 +240,15 @@ html[lang="te"] .hero h1,html[lang="hi"] .hero h1{font-size:52px;line-height:1.0
 <form id="bookingForm">
 <div class="detail-grid">
 <label>Selected Pooja<input id="selectedService" readonly></label>
-<label>Preferred Language<select required><option value="">Select</option><option>Telugu</option><option>Hindi</option><option>English</option><option>Other</option></select></label>
-<label>Date<input type="date" required></label>
-<label>Preferred Time<input type="time" required></label>
-<label class="full">Location / Address<input type="text" placeholder="House / apartment, area, city" required></label>
-<label>Customer Name<input type="text" placeholder="Your name" required></label>
-<label>Mobile Number<input type="tel" placeholder="10-digit mobile number" required></label>
-<label>Samagri<select><option>I need Samagri assistance</option><option>I will arrange Samagri</option><option>Please advise me</option></select></label>
-<label>Guests / Family Size<input type="number" min="1" placeholder="Optional"></label>
-<label class="full">Special Requirements<textarea placeholder="Muhurtham, tradition, family requirements, etc."></textarea></label>
+<label>Preferred Language<select name="language" required><option value="">Select</option><option>Telugu</option><option>Hindi</option><option>English</option><option>Other</option></select></label>
+<label>Date<input name="date" type="date" required></label>
+<label>Preferred Time<input name="time" type="time" required></label>
+<label class="full">Location / Address<input name="address" type="text" placeholder="House / apartment, area, city" required></label>
+<label>Customer Name<input name="name" type="text" placeholder="Your name" required></label>
+<label>Mobile Number<input name="phone" type="tel" placeholder="10-digit mobile number" required></label>
+<label>Samagri<select name="samagri"><option>I need Samagri assistance</option><option>I will arrange Samagri</option><option>Please advise me</option></select></label>
+<label>Guests / Family Size<input name="people" type="number" min="1" placeholder="Optional"></label>
+<label class="full">Special Requirements<textarea name="specialRequirements" placeholder="Muhurtham, tradition, family requirements, etc."></textarea></label>
 </div>
 <button class="btn btn-primary confirm" type="submit">Submit Booking Request →</button>
 <div class="success" id="success">🪔 Your request has been received. Our team will review your requirements and contact you for confirmation.</div>
@@ -427,10 +427,46 @@ if(search) search.addEventListener('input',e=>{
   document.querySelectorAll('#miniList .mini').forEach(x=>{x.style.display=x.dataset.service.toLowerCase().includes(q)?'flex':'none';});
 });
 const bookingForm=document.getElementById('bookingForm');
-if(bookingForm) bookingForm.addEventListener('submit',e=>{
+const BOOKING_ENDPOINT='https://script.google.com/macros/s/AKfycbxf9iCUMMjdlor7YgsV76VJEWm7LaQqZmbCPN2zEImDWANe7jpl9G7C1K9p078ErINggQ/exec';
+if(bookingForm) bookingForm.addEventListener('submit',async e=>{
   e.preventDefault();
-  document.getElementById('success').classList.add('show');
-  successSound();
+  const submitBtn=bookingForm.querySelector('.confirm');
+  const originalButtonText=submitBtn ? submitBtn.textContent : 'Submit Booking Request →';
+  const selectedDisplay=selected ? selected.value : selectedEnglishService;
+  const success=document.getElementById('success');
+  const fd=new FormData(bookingForm);
+  const payload={
+    name:fd.get('name')||'',
+    phone:fd.get('phone')||'',
+    pooja:selectedEnglishService||fd.get('selectedService')||'',
+    date:fd.get('date')||'',
+    time:fd.get('time')||'',
+    address:fd.get('address')||'',
+    language:fd.get('language')||'',
+    people:fd.get('people')||'',
+    samagri:fd.get('samagri')||'',
+    specialRequirements:fd.get('specialRequirements')||''
+  };
+  if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='Submitting…';}
+  try{
+    // no-cors is intentional: Google Apps Script redirects its response,
+    // but the booking is still accepted by the deployed web app.
+    await fetch(BOOKING_ENDPOINT,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(payload)
+    });
+    success.classList.add('show');
+    successSound();
+    bookingForm.reset();
+    const liveSelected=document.getElementById('selectedService');
+    if(liveSelected) liveSelected.value=selectedDisplay || selectedEnglishService;
+  }catch(err){
+    alert('We could not submit your request right now. Please try again or contact Brahma Vidya directly.');
+  }finally{
+    if(submitBtn){submitBtn.disabled=false;submitBtn.textContent=originalButtonText;}
+  }
 });
 // Small click sound for interactive buttons/links, with the Pooja selection using the bell.
 document.querySelectorAll('.btn,.lang,.navlinks a').forEach(el=>el.addEventListener('click',()=>clickSound()));
